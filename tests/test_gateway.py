@@ -90,13 +90,28 @@ class GatewayTest(unittest.TestCase):
 
     def test_workflow_routes(self):
         self.assert_error(self.request("/api/v1/sagas/receive-supplies", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
-        for path in ("/api/v1/sagas/receive-supplies", "/api/v1/sagas/saga-id", "/api/v1/sagas/saga-id/resume"):
+        for path, method, key in (("/api/v1/sagas/receive-supplies", "POST", "workflow-start-001"),
+                                  ("/api/v1/sagas/saga-id", "GET", None),
+                                  ("/api/v1/sagas/saga-id/resume", "POST", None)):
             time.sleep(0.15)
-            result = self.request(path, method="POST", body=b"{}", headers={"Authorization": "Bearer stub-token",
-                "Idempotency-Key": "workflow-001", "X-Correlation-Id": "workflow-trace"})
+            headers = {"Authorization": "Bearer stub-token", "X-Correlation-Id": "workflow-trace"}
+            if key is not None:
+                headers["Idempotency-Key"] = key
+            result = self.request(path, method=method, body=b"{}" if method == "POST" else None, headers=headers)
             self.assertEqual(200, result[0])
             self.assertEqual("workflow-trace", result[2]["correlation"])
+            self.assertEqual(path, result[2]["path"])
+            self.assertEqual(method, result[2]["method"])
+            self.assertEqual(key, result[2]["idempotencyKey"])
         self.assert_error(self.request("/api/v1/sagas/id/delete", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
+
+    def test_workflow_compensation_route(self):
+        self.assert_error(self.request("/api/v1/sagas/id/compensate", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
+        result = self.request("/api/v1/sagas/id/compensate", method="POST", body=b"{}", headers={"Authorization": "Bearer stub-token"})
+        self.assertEqual(200, result[0])
+        self.assertEqual("/api/v1/sagas/id/compensate", result[2]["path"])
+        self.assertEqual("POST", result[2]["method"])
+        self.assertIsNone(result[2]["idempotencyKey"])
 
     def test_inventory_query_routes(self):
         for path in ("/api/v1/stock", "/api/v1/movements"):

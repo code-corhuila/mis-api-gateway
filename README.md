@@ -92,3 +92,7 @@ Las rutas /api/v1/sagas/receive-supplies, /api/v1/sagas/{id} y /api/v1/sagas/{id
 Administrar el sistema completo desde mis-infra-postgres con compose.workflow.yml y scripts/Start-Workflow.ps1. La raiz anterior no contiene workflow. Evidencia 2026-10-11: 13 pruebas aisladas correctas y recepcion real dev, con reinicio/recuperacion sin duplicar stock. Publicacion de dominios y promocion QA pendientes.
 
 Rama feat/hu-wfl-001-integration-dev hacia develop. Titulo/commit: feat(gateway): route reception saga operations. Guia de los tres PR: ../mis-infra-postgres/docs/HU-WFL-001-integracion-publicacion.md.
+
+## Recuperacion administrativa - HU-WFL-002
+
+/api/v1/sagas/{id}/compensate se reenvia a workflow:8080. El gateway exige bearer; workflow verifica RS256 y reserva esta decision a ADMIN. No agregar acciones de undo directas en el gateway. Catorce pruebas aisladas correctas y aceptacion real de compensacion en dev; guia actual ../mis-infra-postgres/docs/HU-WFL-002-publicacion.md. Rama feat/hu-wfl-002-compensation-dev hacia develop.

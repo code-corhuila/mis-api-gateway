@@ -12,6 +12,7 @@ Entrada unica de MediStock (Medicine Inventory System), HU-OPS-001. Nginx 1.30.5
 | /api/v1/auth/me | mis-security | Bearer requerido |
 | /api/v1/medications y /{id} | Catalogo | Bearer requerido |
 | /api/v1/suppliers y /{id} | Proveedores | Bearer requerido |
+| /api/v1/entries, /{id}, /{id}/activate y /{id}/cancel | Inventario | Bearer requerido |
 
 El gateway solo comprueba presencia de Bearer. Cada API valida firma RS256, claims y permisos; un token arbitrario no autentica al usuario. Se eliminan X-User-Id y X-User-Role antes de reenviar. URI, consulta e Idempotency-Key se conservan, sin reintentar escrituras automaticamente.
 
@@ -50,11 +51,11 @@ cd "D:\descargas\pago 2\mis-api-gateway"
 python tests/test_gateway.py
 ```
 
-Ocho pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
+Nueve pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
 
 Rama hu-ops-001-gateway-dev desde develop y PR hacia develop dentro de code-corhuila/mis-api-gateway. CI solo en PR develop/qa, con cancelacion y limite de 10 minutos. QA recibe cherry-pick -x; main requiere aprobacion del docente. Preservar CODEOWNERS.
 
-Pendientes: publicar las piezas locales de dominio, integrar frontend e Inventario, definir TLS para un despliegue no local, promover a QA y registrar evidencias centrales. El puerto actual se enlaza solo a 127.0.0.1. Esta entrega no cierra HU-OPS-001 completa.
+Pendientes: publicar las piezas locales de dominio, integrar frontend y las restantes HU de Inventario, definir TLS para un despliegue no local, promover a QA y registrar evidencias centrales. El puerto actual se enlaza solo a 127.0.0.1. Esta entrega no cierra HU-OPS-001 completa.
 
 ## Evidencia local - 2026-10-10
 
@@ -63,3 +64,11 @@ Ocho pruebas aisladas aprobadas: rutas, Bearer, CORS, correlacion, cuerpo, confi
 Aceptacion real aprobada con Seguridad, PostgreSQL y MongoDB: login de cuatro roles, escritura exclusiva de ADMIN, consultas, Location e idempotencia conservadas en los dos dominios. Composicion comprobada sin puertos directos de las APIs; gateway saludable en localhost:8080. CI de este PR y promocion a QA/main siguen pendientes.
 
 Documentacion central: [mis-docs](https://github.com/code-corhuila/mis-docs).
+
+## Integracion de Inventario - HU-INV-001
+
+La rama hu-inv-001-dev agrega /api/v1/entries, consulta por UUID y las transiciones activate/cancel hacia el backend inventory:8080. Solo reenvia credenciales: la API verifica JWT y permisos. El backend y sus migraciones se prepararon localmente, pendientes de repositorios oficiales.
+
+Para incluir Inventario ejecutar scripts/Start-Inventory.ps1 desde mis-infra-postgres y administrar el ambiente con compose.inventory.yml. Start-Gateway y compose.gateway.yml corresponden al alcance anterior sin Inventario; no mezclar raices para administrar el mismo proyecto.
+
+Evidencia local, 2026-10-10: nueve pruebas aisladas del gateway correctas, incluidas las nuevas rutas; aceptacion real de Inventario con permisos, idempotencia y concurrencia correcta. Este avance no acredita publicacion de dominios ni QA formal.

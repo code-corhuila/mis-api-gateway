@@ -21,5 +21,6 @@ services:
     networks: [test]
   catalog: *stub
   suppliers: *stub
+  inventory: *stub
 networks:
   test:

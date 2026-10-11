@@ -75,6 +75,14 @@ class GatewayTest(unittest.TestCase):
         self.assert_error(self.request("/health", headers={"Origin": "http://untrusted.example"}), 403, "FORBIDDEN")
         self.assert_error(self.request("/health", method="OPTIONS"), 400, "VALIDATION_ERROR")
 
+    def test_inventory_routes(self):
+        self.assert_error(self.request("/api/v1/entries", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
+        for path in ("/api/v1/entries", "/api/v1/entries/entry-id", "/api/v1/entries/entry-id/activate", "/api/v1/entries/entry-id/cancel"):
+            time.sleep(0.15)
+            result = self.request(path, method="POST", body=b"{}", headers={"Authorization": "Bearer stub-token", "Idempotency-Key": "inventory-001"})
+            self.assertEqual(200, result[0])
+        self.assert_error(self.request("/api/v1/entries/id/delete", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
+
     def test_invalid_correlation_body_and_path(self):
         self.assert_error(self.request("/health", headers={"X-Correlation-Id": "bad/value"}), 400, "VALIDATION_ERROR")
         self.assert_error(self.request("/api/v1/auth/login", method="POST", body=b"x" * 65537), 413, "PAYLOAD_TOO_LARGE")

@@ -96,3 +96,9 @@ Rama feat/hu-wfl-001-integration-dev hacia develop. Titulo/commit: feat(gateway)
 ## Recuperacion administrativa - HU-WFL-002
 
 /api/v1/sagas/{id}/compensate se reenvia a workflow:8080. El gateway exige bearer; workflow verifica RS256 y reserva esta decision a ADMIN. No agregar acciones de undo directas en el gateway. Catorce pruebas aisladas correctas y aceptacion real de compensacion en dev; guia actual ../mis-infra-postgres/docs/HU-WFL-002-publicacion.md. Rama feat/hu-wfl-002-compensation-dev hacia develop.
+
+## HU-CAT-002
+
+PUT de medicamento y POST /{id}/deactivate se enrutan a Catalogo, sin reglas de negocio
+en gateway. CORS permite PUT/If-Match y expone ETag; Catalogo valida ADMIN y version.
+Las pruebas comprueban metodo, ruta y cabecera realmente recibidos por el upstream.

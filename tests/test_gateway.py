@@ -105,6 +105,21 @@ class GatewayTest(unittest.TestCase):
             self.assertEqual(key, result[2]["idempotencyKey"])
         self.assert_error(self.request("/api/v1/sagas/id/delete", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
 
+    def test_catalog_maintenance_and_conditional_cors(self):
+        headers = {"Authorization": "Bearer stub-token", "If-Match": '"2"'}
+        for path, method in (("/api/v1/medications/id", "PUT"), ("/api/v1/medications/id/deactivate", "POST")):
+            time.sleep(0.15)
+            response = self.request(path, method=method, body=b"{}", headers=headers)
+            self.assertEqual(200, response[0])
+            self.assertEqual((path, method, '"2"'), (response[2]["path"], response[2]["method"], response[2]["ifMatch"]))
+            self.assertEqual('"3"', response[1]["ETag"])
+        preflight = self.request("/api/v1/medications/id", method="OPTIONS",
+            headers={"Origin": "http://localhost:4200", "Access-Control-Request-Method": "PUT"})
+        self.assertEqual(204, preflight[0])
+        self.assertIn("If-Match", preflight[1]["Access-Control-Allow-Headers"])
+        self.assertIn("ETag", preflight[1]["Access-Control-Expose-Headers"])
+        self.assert_error(self.request("/api/v1/medications/id/deactivate", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
+
     def test_workflow_compensation_route(self):
         self.assert_error(self.request("/api/v1/sagas/id/compensate", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
         result = self.request("/api/v1/sagas/id/compensate", method="POST", body=b"{}", headers={"Authorization": "Bearer stub-token"})

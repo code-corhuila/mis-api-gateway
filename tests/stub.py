@@ -11,6 +11,7 @@ class Handler(BaseHTTPRequestHandler):
             time.sleep(12)
         content = json.dumps({"path": uri.path, "query": uri.query,
             "method": self.command, "idempotencyKey": self.headers.get("Idempotency-Key"),
+            "ifMatch": self.headers.get("If-Match"),
             "correlation": self.headers.get("X-Correlation-Id"),
             "roleHeader": self.headers.get("X-User-Role"),
             "authorizationPresent": bool(self.headers.get("Authorization"))}).encode()
@@ -18,6 +19,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(content)))
         self.send_header("X-Correlation-Id", self.headers.get("X-Correlation-Id", "stub"))
+        self.send_header("ETag", '"3"')
         self.end_headers()
         try:
             self.wfile.write(content)
@@ -25,6 +27,7 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     do_POST = do_GET
+    do_PUT = do_GET
 
     def log_message(self, *args):
         pass

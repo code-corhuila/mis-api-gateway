@@ -84,3 +84,11 @@ La rama hu-inv-001-dev agrega /api/v1/entries, consulta por UUID y las transicio
 Para incluir Inventario ejecutar scripts/Start-Inventory.ps1 desde mis-infra-postgres y administrar el ambiente con compose.inventory.yml. Start-Gateway y compose.gateway.yml corresponden al alcance anterior sin Inventario; no mezclar raices para administrar el mismo proyecto.
 
 Evidencia local, 2026-10-10: nueve pruebas aisladas del gateway correctas, incluidas las nuevas rutas; aceptacion real de Inventario con permisos, idempotencia y concurrencia correcta. Este avance no acredita publicacion de dominios ni QA formal.
+
+## Recepciones integradas - HU-WFL-001
+
+Las rutas /api/v1/sagas/receive-supplies, /api/v1/sagas/{id} y /api/v1/sagas/{id}/resume se reenvian a workflow:8080. El gateway conserva JWT humano, clave idempotente y correlacion; workflow autentica/autoriza y usa su JWT de servicio separado para los participantes. No hay puerto publico adicional del workflow.
+
+Administrar el sistema completo desde mis-infra-postgres con compose.workflow.yml y scripts/Start-Workflow.ps1. La raiz anterior no contiene workflow. Evidencia 2026-10-11: 13 pruebas aisladas correctas y recepcion real dev, con reinicio/recuperacion sin duplicar stock. Publicacion de dominios y promocion QA pendientes.
+
+Rama feat/hu-wfl-001-integration-dev hacia develop. Titulo/commit: feat(gateway): route reception saga operations. Guia de los tres PR: ../mis-infra-postgres/docs/HU-WFL-001-integracion-publicacion.md.

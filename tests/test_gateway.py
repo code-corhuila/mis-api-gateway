@@ -88,6 +88,16 @@ class GatewayTest(unittest.TestCase):
         self.assert_error(self.request("/api/v1/auth/login", method="POST", body=b"x" * 65537), 413, "PAYLOAD_TOO_LARGE")
         self.assert_error(self.request("/not-a-route"), 404, "NOT_FOUND")
 
+    def test_workflow_routes(self):
+        self.assert_error(self.request("/api/v1/sagas/receive-supplies", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
+        for path in ("/api/v1/sagas/receive-supplies", "/api/v1/sagas/saga-id", "/api/v1/sagas/saga-id/resume"):
+            time.sleep(0.15)
+            result = self.request(path, method="POST", body=b"{}", headers={"Authorization": "Bearer stub-token",
+                "Idempotency-Key": "workflow-001", "X-Correlation-Id": "workflow-trace"})
+            self.assertEqual(200, result[0])
+            self.assertEqual("workflow-trace", result[2]["correlation"])
+        self.assert_error(self.request("/api/v1/sagas/id/delete", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
+
     def test_inventory_query_routes(self):
         for path in ("/api/v1/stock", "/api/v1/movements"):
             time.sleep(0.15)

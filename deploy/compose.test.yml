@@ -22,5 +22,6 @@ services:
   catalog: *stub
   suppliers: *stub
   inventory: *stub
+  workflow: *stub
 networks:
   test:

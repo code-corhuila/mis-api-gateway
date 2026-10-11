@@ -105,6 +105,13 @@ class GatewayTest(unittest.TestCase):
             self.assertEqual(200, self.request(path, headers={"Authorization": "Bearer stub-token"})[0])
         self.assert_error(self.request("/api/v1/exits/id/cancel", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
 
+    def test_receipt_routes(self):
+        self.assert_error(self.request("/api/v1/receipts", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
+        for path in ("/api/v1/receipts", "/api/v1/receipts/id", "/api/v1/receipts/id/confirm", "/api/v1/receipts/id/void"):
+            time.sleep(0.15)
+            self.assertEqual(200, self.request(path, headers={"Authorization": "Bearer stub-token"})[0])
+        self.assert_error(self.request("/api/v1/receipts/id/delete", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
+
     def test_rejects_invalid_configuration(self):
         for origin in ("", "http://localhost:4200;injected"):
             result = subprocess.run(["docker", "run", "--rm", "--read-only", "--tmpfs",

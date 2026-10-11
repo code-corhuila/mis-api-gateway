@@ -51,7 +51,7 @@ cd "D:\descargas\pago 2\mis-api-gateway"
 python tests/test_gateway.py
 ```
 
-Once pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
+Doce pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
 
 Rama hu-ops-001-gateway-dev desde develop y PR hacia develop dentro de code-corhuila/mis-api-gateway. CI solo en PR develop/qa, con cancelacion y limite de 10 minutos. QA recibe cherry-pick -x; main requiere aprobacion del docente. Preservar CODEOWNERS.
 
@@ -72,6 +72,10 @@ Las rutas exactas /api/v1/stock y /api/v1/movements reenvian al mismo backend in
 ## Salidas de Inventario - HU-INV-003
 
 /api/v1/exits y /api/v1/exits/{id} se reenvian a inventory:8080. No se admiten subrutas de cancelacion ni puertos directos. La API controla permisos, stock, vencimiento e idempotencia; el gateway conserva Authorization, Idempotency-Key y correlacion. Test-InventoryExits.ps1 verifica las reglas contra PostgreSQL real con datos sinteticos.
+
+## Recepciones de Proveedores - HU-WFL-001
+
+/api/v1/receipts, consulta por UUID y confirm/void se reenvian a suppliers:8080. No se admiten subrutas arbitrarias. La API exige identidad de workflow firmada para escribir; el gateway no interpreta el claim service ni confia en X-Service. Esta ampliacion no agrega aun las rutas del orquestador de sagas.
 
 ## Integracion de Inventario - HU-INV-001
 

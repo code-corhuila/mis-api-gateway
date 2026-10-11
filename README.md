@@ -51,7 +51,7 @@ cd "D:\descargas\pago 2\mis-api-gateway"
 python tests/test_gateway.py
 ```
 
-Nueve pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
+Diez pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
 
 Rama hu-ops-001-gateway-dev desde develop y PR hacia develop dentro de code-corhuila/mis-api-gateway. CI solo en PR develop/qa, con cancelacion y limite de 10 minutos. QA recibe cherry-pick -x; main requiere aprobacion del docente. Preservar CODEOWNERS.
 
@@ -64,6 +64,10 @@ Ocho pruebas aisladas aprobadas: rutas, Bearer, CORS, correlacion, cuerpo, confi
 Aceptacion real aprobada con Seguridad, PostgreSQL y MongoDB: login de cuatro roles, escritura exclusiva de ADMIN, consultas, Location e idempotencia conservadas en los dos dominios. Composicion comprobada sin puertos directos de las APIs; gateway saludable en localhost:8080. CI de este PR y promocion a QA/main siguen pendientes.
 
 Documentacion central: [mis-docs](https://github.com/code-corhuila/mis-docs).
+
+## Consultas de Inventario - HU-INV-002
+
+Las rutas exactas /api/v1/stock y /api/v1/movements reenvian al mismo backend interno inventory:8080, conservando query string, JWT y correlacion. No se habilitan subrutas arbitrarias ni puertos directos. Los permisos y filtros se validan en Inventario. La prueba aislada comprueba rutas y autenticacion presente; Test-InventoryRead.ps1 en infraestructura valida stock e historial con roles y datos reales sinteticos.
 
 ## Integracion de Inventario - HU-INV-001
 

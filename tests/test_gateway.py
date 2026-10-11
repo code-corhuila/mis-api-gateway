@@ -88,6 +88,16 @@ class GatewayTest(unittest.TestCase):
         self.assert_error(self.request("/api/v1/auth/login", method="POST", body=b"x" * 65537), 413, "PAYLOAD_TOO_LARGE")
         self.assert_error(self.request("/not-a-route"), 404, "NOT_FOUND")
 
+    def test_inventory_query_routes(self):
+        for path in ("/api/v1/stock", "/api/v1/movements"):
+            time.sleep(0.15)
+            self.assert_error(self.request(path), 401, "UNAUTHORIZED")
+            time.sleep(0.15)
+            result = self.request(path + "?page=2&limit=1", headers={"Authorization": "Bearer stub-token"})
+            self.assertEqual(200, result[0])
+            self.assertEqual("page=2&limit=1", result[2]["query"])
+        self.assert_error(self.request("/api/v1/stock/id", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
+
     def test_rejects_invalid_configuration(self):
         for origin in ("", "http://localhost:4200;injected"):
             result = subprocess.run(["docker", "run", "--rm", "--read-only", "--tmpfs",

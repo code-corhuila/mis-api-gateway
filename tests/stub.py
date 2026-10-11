@@ -10,6 +10,7 @@ class Handler(BaseHTTPRequestHandler):
         if uri.query == "delay=12":
             time.sleep(12)
         content = json.dumps({"path": uri.path, "query": uri.query,
+            "method": self.command, "idempotencyKey": self.headers.get("Idempotency-Key"),
             "correlation": self.headers.get("X-Correlation-Id"),
             "roleHeader": self.headers.get("X-User-Role"),
             "authorizationPresent": bool(self.headers.get("Authorization"))}).encode()

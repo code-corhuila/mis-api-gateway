@@ -1,0 +1,25 @@
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      GATEWAY_ALLOWED_ORIGINS: http://localhost:4200
+    ports: ["127.0.0.1:0:8080"]
+    read_only: true
+    tmpfs: ["/tmp:uid=101,gid=101,mode=0700"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 1s
+      timeout: 2s
+      retries: 15
+    networks: [test]
+  security: &stub
+    image: python:3.12-slim-bookworm
+    command: ["python", "/tests/stub.py"]
+    volumes: ["../tests/stub.py:/tests/stub.py:ro"]
+    networks: [test]
+  catalog: *stub
+  suppliers: *stub
+networks:
+  test:

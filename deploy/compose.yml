@@ -1,0 +1,20 @@
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      GATEWAY_ALLOWED_ORIGINS: ${GATEWAY_ALLOWED_ORIGINS:?GATEWAY_ALLOWED_ORIGINS required}
+    ports:
+      - "127.0.0.1:${GATEWAY_HOST_PORT:?GATEWAY_HOST_PORT required}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:uid=101,gid=101,mode=0700
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    stop_grace_period: 20s
+    networks: [platform]
+    restart: unless-stopped

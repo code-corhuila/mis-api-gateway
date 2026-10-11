@@ -1,25 +1,65 @@
 # mis-api-gateway
 
-> Single entry point: authentication, routing and rate limiting
+Entrada unica de MediStock (Medicine Inventory System), HU-OPS-001. Nginx 1.30.5 en contenedor sin privilegios, sistema de archivos de solo lectura y temporales en tmpfs. No contiene claves privadas, cuentas ni una base de datos.
 
-Part of the **Medicine Inventory System** distributed system — team `medicine-inventory-system`, Grupo 1.
-Governance and documentation live in [`mis-docs`](https://github.com/code-corhuila/mis-docs).
+## Alcance
 
-## Branching
+| Ruta | Destino | Seguridad |
+| --- | --- | --- |
+| /health | Estado propio del gateway | Publico, independiente de los dominios |
+| /api/v1/auth/login | mis-security | Credenciales verificadas por Seguridad |
+| /api/v1/auth/jwks | mis-security | Claves publicas |
+| /api/v1/auth/me | mis-security | Bearer requerido |
+| /api/v1/medications y /{id} | Catalogo | Bearer requerido |
+| /api/v1/suppliers y /{id} | Proveedores | Bearer requerido |
 
-Three permanent branches. **None of them accepts a direct commit** — you enter through a child
-branch and leave through a Pull Request.
+El gateway solo comprueba presencia de Bearer. Cada API valida firma RS256, claims y permisos; un token arbitrario no autentica al usuario. Se eliminan X-User-Id y X-User-Role antes de reenviar. URI, consulta e Idempotency-Key se conservan, sin reintentar escrituras automaticamente.
 
+## Arranque
+
+Docker Desktop con contenedores Linux, conexion para la primera construccion y PowerShell 7. Las carpetas de infraestructura, identidad, Catalogo y Proveedores deben estar disponibles como hermanas. Las piezas locales de dominio aun necesitan publicacion oficial.
+
+```powershell
+cd "D:\descargas\pago 2\mis-infra-postgres"
+pwsh -NoProfile -File .\scripts\Start-Gateway.ps1
+pwsh -NoProfile -File .\scripts\Test-Gateway.ps1
 ```
-develop  <--PR--  feat/... fix/... chore/...
-qa       <--PR--  qa/...
-main     <--PR--  release/...  hotfix/...
+
+Direccion inicial http://localhost:8080. Start-Gateway genera env/dev.env solo si falta, con puerto 8080 y origenes http://localhost:4200,http://localhost:5173; conserva configuracion existente. Si el puerto esta ocupado, cambiar GATEWAY_HOST_PORT localmente, no detener procesos ajenos. Docker y los datos no dependen de instalar Java o Python en el equipo.
+
+compose.gateway.yml es la raiz del sistema integrado. Seguridad, Catalogo y Proveedores no publican puertos al host; solo el gateway publica las APIs. PostgreSQL y MongoDB conservan puertos locales de administracion. No ejecutar raices anteriores simultaneamente para el mismo ambiente. Para diagnostico directo, usar explicitamente las composiciones .dev anteriores y volver despues a Start-Gateway.
+
+En Postman, configurar baseUrl y securityUrl de las colecciones existentes con la direccion del gateway. Los puertos 58081/58082/58083 no estan disponibles mientras se usa esta raiz. Login, consultas y creaciones conservan sus contratos y Location relativa.
+
+## Politicas
+
+GATEWAY_ALLOWED_ORIGINS es una lista explicita separada por comas, sin espacios, rutas ni wildcard. HTTP/HTTPS, host y puerto opcional; IPv6 literal no incluido en este validador inicial. Se rechazan origenes no autorizados. Preflight admite GET, POST y HEAD sin token, para rutas conocidas. Permite Authorization, Content-Type, Idempotency-Key y X-Correlation-Id; expone Location, X-Correlation-Id y Retry-After. No utiliza cookies ni Access-Control-Allow-Credentials.
+
+Diez solicitudes por segundo y por IP real del peer, burst 20. X-Forwarded-For del cliente no se confia. Exceso devuelve 429 TOO_MANY_REQUESTS con Retry-After=1. La salud y los rechazos locales tempranos no consumen el limite de solicitudes reenviadas. Configuracion basada en el [modulo oficial limit_req](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html).
+
+Correlacion valida se conserva; si falta se genera UUID y, si es invalida, se devuelve 400 con nueva correlacion segura. Se entrega una sola cabecera incluso si la API tambien la devuelve. Errores propios usan error, message y traceId; errores de negocio de las APIs se conservan sin reemplazarlos.
+
+Cuerpo maximo 64 KiB; cabeceras 5 segundos, cuerpo y escritura 15, keep-alive 30 y apagado ordenado 20. Conexion upstream 2 segundos y espera de lectura 10. Los timeouts de Nginx son limites de inactividad, no una promesa de plazo total para todos los casos. No se afirma cumplimiento completo de requisitos no funcionales del release.
+
+Resolucion DNS de Docker con renovacion, sin depender de IPs fijas. Fallo o timeout de un upstream produce 503 SERVICE_UNAVAILABLE solo en su ruta; la salud propia y otros dominios siguen disponibles. Auditoria JSON sin Authorization, cuerpos o query string. Configuracion basada en el [proxy oficial Nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html).
+
+## Pruebas y entrega
+
+```powershell
+cd "D:\descargas\pago 2\mis-api-gateway"
+python tests/test_gateway.py
 ```
 
-Promotion happens **by re-application** (`git cherry-pick -x`), never by merging one permanent
-branch into another: `merge develop -> qa` and `merge qa -> main` do not exist in this model.
+Ocho pruebas con upstreams sinteticos en proyecto Docker desechable; no prueban firmas JWT. Test-Gateway comprueba identidad y roles reales, creacion e idempotencia en ambos motores, CORS, correlacion y ausencia de puertos directos. Conserva un medicamento y un proveedor sinteticos por corrida.
 
-`main` requires **1 approval from `ariel5253`**. On `develop` and `qa` the team sets its own review
-rule.
+Rama hu-ops-001-gateway-dev desde develop y PR hacia develop dentro de code-corhuila/mis-api-gateway. CI solo en PR develop/qa, con cancelacion y limite de 10 minutos. QA recibe cherry-pick -x; main requiere aprobacion del docente. Preservar CODEOWNERS.
 
-Full policy: `00-governance/branching-policy.md` in `mis-docs`.
+Pendientes: publicar las piezas locales de dominio, integrar frontend e Inventario, definir TLS para un despliegue no local, promover a QA y registrar evidencias centrales. El puerto actual se enlaza solo a 127.0.0.1. Esta entrega no cierra HU-OPS-001 completa.
+
+## Evidencia local - 2026-10-10
+
+Ocho pruebas aisladas aprobadas: rutas, Bearer, CORS, correlacion, cuerpo, configuracion invalida, aislamiento de fallo/timeout y 429 con Retry-After. Se eliminaron los contenedores y red de prueba al terminar, sin tocar desarrollo.
+
+Aceptacion real aprobada con Seguridad, PostgreSQL y MongoDB: login de cuatro roles, escritura exclusiva de ADMIN, consultas, Location e idempotencia conservadas en los dos dominios. Composicion comprobada sin puertos directos de las APIs; gateway saludable en localhost:8080. CI de este PR y promocion a QA/main siguen pendientes.
+
+Documentacion central: [mis-docs](https://github.com/code-corhuila/mis-docs).

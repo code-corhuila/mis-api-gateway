@@ -102,3 +102,20 @@ Rama feat/hu-wfl-001-integration-dev hacia develop. Titulo/commit: feat(gateway)
 PUT de medicamento y POST /{id}/deactivate se enrutan a Catalogo, sin reglas de negocio
 en gateway. CORS permite PUT/If-Match y expone ETag; Catalogo valida ADMIN y version.
 Las pruebas comprueban metodo, ruta y cabecera realmente recibidos por el upstream.
+
+## HU-WRK-001: Expiry Alert Reads
+
+The exact /api/v1/alerts/expiry path now routes to inventory:8080 with the original
+query, Bearer and correlation. Inventory remains responsible for RS256, human
+ADMIN/INVENTORY/SUPERVISOR permissions and strict filters; Gateway does not grant
+roles or interpret claims. No internal evaluation/event route or alert subroute is
+published. The owner supplies GET/HEAD semantics and rejects unsupported writes.
+Existing CORS, rate limiting and dependency isolation policies are unchanged.
+
+Tests use Nginx with disposable stub upstreams, not real JWT authorization or
+Inventory SQL. Fixtures prove query/credential presence, correlation, CORS, private
+routes, preservation of upstream 403/405 and Inventory outage isolation. This
+increment does not deploy the Gateway or migrate Inventory; all seven Inventory DB
+changesets and the expiry HTTP API are required before real acceptance. Frontend,
+signed full-pipeline acceptance, live alignment and QA remain pending; HU-WRK-001
+is not closed. See docs/WRK-001-alert-route-acceptance.md for publication evidence.

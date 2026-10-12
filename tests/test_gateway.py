@@ -145,6 +145,43 @@ class GatewayTest(unittest.TestCase):
             self.assertEqual(200, self.request(path, headers={"Authorization": "Bearer stub-token"})[0])
         self.assert_error(self.request("/api/v1/exits/id/cancel", headers={"Authorization": "Bearer stub-token"}), 404, "NOT_FOUND")
 
+    def test_expiry_alert_route_preserves_query_bearer_trace_and_cors(self):
+        self.assert_error(self.request("/api/v1/alerts/expiry"), 401, "UNAUTHORIZED")
+        query = "page=2&limit=20&state=OPEN&severity=EXPIRED&lotId=11111111-1111-4111-8111-111111111111"
+        response = self.request("/api/v1/alerts/expiry?"+query, headers={"Authorization": "Bearer stub-token",
+            "X-Correlation-Id": "expiry-route", "X-User-Role": "ADMIN", "Origin": "http://localhost:4200"})
+        self.assertEqual(200, response[0])
+        self.assertEqual(("GET","/api/v1/alerts/expiry",query), (response[2]["method"],response[2]["path"],response[2]["query"]))
+        self.assertTrue(response[2]["authorizationPresent"]); self.assertIsNone(response[2]["roleHeader"])
+        self.assertEqual("expiry-route",response[2]["correlation"])
+        self.assertEqual(["expiry-route"],response[1].get_all("X-Correlation-Id"))
+        self.assertEqual("http://localhost:4200",response[1]["Access-Control-Allow-Origin"])
+        preflight = self.request("/api/v1/alerts/expiry",method="OPTIONS",headers={"Origin":"http://localhost:4200","Access-Control-Request-Method":"GET"})
+        self.assertEqual(204,preflight[0])
+
+    def test_expiry_internal_and_unpublished_subroutes_remain_private(self):
+        for path in ("/api/v1/internal/alerts/expiry/evaluate", "/api/v1/internal/events/stock-changed",
+                     "/api/v1/alerts/expiry/evaluate", "/api/v1/alerts/expiry/id", "/api/v1/alerts/expiry/"):
+            time.sleep(.15)
+            self.assert_error(self.request(path,headers={"Authorization":"Bearer stub-token"}),404,"NOT_FOUND")
+
+    def test_expiry_owner_permissions_and_method_errors_are_not_replaced(self):
+        response = self.request("/api/v1/alerts/expiry",headers={"Authorization":"Bearer stub-forbidden","X-Correlation-Id":"expiry-denied"})
+        self.assert_error(response,403,"FORBIDDEN")
+        self.assertEqual("Owner rejected request.",response[2]["message"])
+        response = self.request("/api/v1/alerts/expiry",method="POST",body=b"{}",headers={"Authorization":"Bearer stub-token"})
+        self.assert_error(response,405,"METHOD_NOT_ALLOWED")
+        self.assertEqual("GET, HEAD",response[1]["Allow"])
+
+    def test_expiry_inventory_failure_is_isolated(self):
+        subprocess.run(COMPOSE+["stop","inventory"],check=True)
+        try:
+            self.assert_error(self.request("/api/v1/alerts/expiry",headers={"Authorization":"Bearer stub-token"}),503,"SERVICE_UNAVAILABLE")
+            self.assertEqual(200,self.request("/health")[0])
+            self.assertEqual(200,self.request("/api/v1/suppliers",headers={"Authorization":"Bearer stub-token"})[0])
+        finally:
+            subprocess.run(COMPOSE+["start","inventory"],check=True); time.sleep(1)
+
     def test_receipt_routes(self):
         self.assert_error(self.request("/api/v1/receipts", method="POST", body=b"{}"), 401, "UNAUTHORIZED")
         for path in ("/api/v1/receipts", "/api/v1/receipts/id", "/api/v1/receipts/id/confirm", "/api/v1/receipts/id/void"):
